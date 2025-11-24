@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的口袋拍立得</title>
+    <style>
+        body {
+            background-color: #f0f0f0;
+            font-family: 'Helvetica Neue', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* 拍立得相纸主体 */
+        #polaroid-card {
+            background-color: #fff;
+            width: 300px;
+            height: 360px; /* 经典的底部留白比例 */
+            padding: 15px 15px 60px 15px; /* 上左右窄，下宽 */
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            transform: rotate(-2deg); /* 稍微歪一点，更有实感 */
+            transition: transform 0.3s;
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 图片显示区域 */
+        #photo-area {
+            width: 270px;
+            height: 270px;
+            background-color: #333;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 实际图片 */
+        #display-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0; /* 初始不可见，为了显影效果 */
+            transition: opacity 3s ease-in-out; /* 3秒显影过程 */
+            filter: sepia(0.2) contrast(1.1) brightness(1.1); /* 默认加一点点复古滤镜 */
+        }
+
+        /* 操作按钮区域 */
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-direction: column;
+            width: 300px;
+        }
+
+        button, label {
+            background-color: #333;
+            color: white;
+            padding: 12px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            border: none;
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        /* 模拟吐片动画 */
+        @keyframes eject {
+            0% { transform: translateY(-100px) scale(0.9); opacity: 0; }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+
+        .printing {
+            animation: eject 1s ease-out forwards;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="polaroid-card">
+        <div id="photo-area">
+            <img id="display-image" src="" alt="上传照片">
+        </div>
+        </div>
+
+    <div class="controls">
+        <label for="upload-btn">📸 拍摄 / 选择照片</label>
+        <input type="file" id="upload-btn" accept="image/*">
+        
+        <button onclick="downloadImage()">💾 下载相纸</button>
+    </div>
+
+    <canvas id="export-canvas" style="display:none;"></canvas>
+
+    <script>
+        const uploadInput = document.getElementById('upload-btn');
+        const displayImg = document.getElementById('display-image');
+        const card = document.getElementById('polaroid-card');
+
+        // 1. 处理上传
+        uploadInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                
+                reader.onload = function(event) {
+                    // 模拟重置
+                    displayImg.style.opacity = 0; 
+                    card.classList.remove('printing');
+
+                    // 稍微延迟一下，模拟机器反应
+                    setTimeout(() => {
+                        displayImg.src = event.target.result;
+                        
+                        // 播放吐片动画
+                        card.classList.add('printing');
+                        
+                        // 播放显影动画 (延迟一点点让吐片先开始)
+                        setTimeout(() => {
+                            displayImg.style.opacity = 1;
+                        }, 500);
+                    }, 200);
+                }
+                
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // 2. 下载功能 (利用Canvas合成)
+        function downloadImage() {
+            if (!displayImg.src) return alert("先传张照片吧！");
+
+            const canvas = document.getElementById('export-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // 设置高分辨率画布
+            canvas.width = 600; 
+            canvas.height = 720; 
+            
+            // 画白底
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, 600, 720);
+
+            // 画图片
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.src = displayImg.src;
+            
+            img.onload = function() {
+                // 保持比例裁剪并绘制到中间
+                // 这里简单处理，直接拉伸铺满显示区，后续我们优化裁剪算法
+                // 模拟CSS滤镜效果
+                ctx.filter = "sepia(0.2) contrast(1.1) brightness(1.1)";
+                ctx.drawImage(img, 30, 30, 540, 540);
+                
+                // 导出
+                const link = document.createElement('a');
+                link.download = 'my-polaroid.jpg';
+                link.href = canvas.toDataURL('image/jpeg', 0.9);
+                link.click();
+            };
+        }
+    </script>
+</body>
+</html>
